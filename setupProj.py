@@ -1,5 +1,6 @@
 import os
 import shutil
+import argparse
 import subprocess as sp
 
 # v1.2.0: Closure 1-133, v2.0.0: Closure 1-176
@@ -52,7 +53,7 @@ def applyPatch(pid, bid, projPath: str, patchPath: str, fileToBackup: str):
     print(stderr)
     return succeed
 
-def main():
+def main(args):
     for pid in projDict.keys():
         bidList, depList = projDict[pid]
         for bid in bidList:
@@ -61,7 +62,13 @@ def main():
             os.makedirs(os.path.join(projDir, pid), exist_ok=True)
             projPath = os.path.join(projDir, pid, str(bid))
 
-            print("================ Checking out {}-{} ================".format(pid, bid))
+            if os.path.isdir(projPath) and os.path.isfile(os.path.join(projPath, 'all_tests')):  # the existence of all_tests file indicates checking out is complete
+                print('Skipping {}'.format(projPath))
+                continue
+            elif os.path.isdir(projPath):
+                shutil.rmtree(projPath)  # if the directory exists, but no all_tests generated, it means the checking out process aborted at some point. Prefer redoing.
+
+            print("\n================ Checking out {}-{} ================".format(pid, bid))
 
             # checkout defects4j projects
             sp.run("defects4j checkout -p {} -v {}b -w {}".format(pid, bid, projPath), shell=True)
@@ -100,17 +107,24 @@ def main():
             print(stdout)
             print(stderr)
 
-            # check defects4j test result
-            sp.run("defects4j test", shell=True, cwd=projPath)  # to generate all_tests and failing_tests file
-            actualFailing = set()
-            with open(os.path.join(projPath, 'failing_tests')) as file:
-                for line in file:
-                    if line.startswith('--- '):
-                        actualFailing.add(line.strip()[4:])
-            expectedFailing = getSetOfFailingTest(pid, bid)
-            if actualFailing != expectedFailing:
-                print('[ERROR] `defects4j test` fails unexpected tests!')
+            if args.skipTest:
+                # copy the all_tests file
+                shutil.copy(os.path.join('all_tests_files', pid, str(bid), 'all_tests'), projPath)
+            else:
+                # check defects4j test result
+                sp.run("defects4j test", shell=True, cwd=projPath)  # to generate all_tests and failing_tests file
+                actualFailing = set()
+                with open(os.path.join(projPath, 'failing_tests')) as file:
+                    for line in file:
+                        if line.startswith('--- '):
+                            actualFailing.add(line.strip()[4:])
+                expectedFailing = getSetOfFailingTest(pid, bid)
+                if actualFailing != expectedFailing:
+                    print('[ERROR] `defects4j test` fails unexpected tests!')
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-s', '--skipTest', help='skip running `defects4j test` after checking out projects', action='store_true')
+    args = parser.parse_args()
+    main(args)
