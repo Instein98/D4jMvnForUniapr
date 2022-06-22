@@ -24,3 +24,6 @@ The script will
 ## Note
 
 - Please note that Unipar can not validate the patches for Mockito-5 now (it requires that the validating JVM does not load the class junit.framework.ComparisonFailure).
+- For Closure-106, please make sure to
+    - run `mvn clean && defects4j compile` to compile first, if you want to run `defects4j test`.
+    - run `mvn test-compile` to compile first, if you want to run Uniapr.
