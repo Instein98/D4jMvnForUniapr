@@ -59,7 +59,7 @@ def main():
             if bid in depList:
                 continue
             os.makedirs(os.path.join(projDir, pid), exist_ok=True)
-            projPath = os.path.join(projDir, pid, bid)
+            projPath = os.path.join(projDir, pid, str(bid))
 
             print("================ Checking out {}-{} ================".format(pid, bid))
 
@@ -67,13 +67,13 @@ def main():
             sp.run("defects4j checkout -p {} -v {}b -w {}".format(pid, bid, projPath), shell=True)
 
             # copy corresponding pom.xml
-            shutil.copy(os.path.join('poms', pid, bid, 'pom.xml'), projPath)
+            shutil.copy(os.path.join('poms', pid, str(bid), 'pom.xml'), projPath)
 
             # apply patch to source file
             if pid == 'Lang':
                 targetFile = os.path.join(projPath, 'src/test/org/apache/commons/lang/builder/StandardToStringStyleTest.java')
                 applyPatch(pid, bid, projPath, os.path.abspath(os.path.join('patches', 'lang.patch')), targetFile)
-                if bid == '64':
+                if bid == 64:
                     targetFile = os.path.join(projPath, 'src/test/org/apache/commons/lang/enums/ValuedEnumTest.java')
                     applyPatch(pid, bid, projPath, os.path.abspath(os.path.join('patches', 'lang64.patch')), targetFile)
             if pid == 'Math':
